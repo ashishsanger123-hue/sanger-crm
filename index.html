@@ -120,13 +120,47 @@ function showTab(name){["dashboard","stock","sale","history"].forEach(t=>$(t+"Ta
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
 $("category").addEventListener("change",()=>{$("imeiFields").classList.toggle("hidden",$("category").value!=="Mobile phones")});
 $("sendOtp").onclick=async()=>{
+ const btn=$("sendOtp");
+ if(btn.disabled)return;
+ btn.disabled=true;
+
  try{
-  if(!configured) throw Error("Firebase is not configured yet. Follow the setup guide in the downloaded project.");
-  const phone=$("phone").value.trim();if(!/^\+[1-9]\d{7,14}$/.test(phone))throw Error("Enter phone with country code, e.g. +919876543210");
-  verifier=new firebase.auth.RecaptchaVerifier("recaptcha-container",{size:"normal"});
-  await verifier.render();const confirmation=await auth.signInWithPhoneNumber(phone,verifier);
-  window.confirmationResult=confirmation;$("otpArea").classList.remove("hidden");notify("OTP sent. Check your SMS.","success");
- }catch(e){loginError(e.message||"Could not send OTP")}
+  if(!configured)throw Error("Firebase is not configured.");
+
+  const phone=$("phone").value.trim();
+
+  if(!/^\+[1-9]\d{7,14}$/.test(phone)){
+   throw Error("Enter phone with country code, e.g. +919876543210");
+  }
+
+  // Create reCAPTCHA only once
+  if(!verifier){
+   verifier=new firebase.auth.RecaptchaVerifier(
+    "recaptcha-container",
+    {size:"normal"}
+   );
+   await verifier.render();
+  }
+
+  const confirmation=await auth.signInWithPhoneNumber(phone,verifier);
+
+  window.confirmationResult=confirmation;
+  $("otpArea").classList.remove("hidden");
+  $("loginError").classList.add("hidden");
+  notify("OTP sent successfully. Check your SMS.","success");
+
+ }catch(e){
+  console.error("OTP Error:",e);
+
+  if(window.grecaptcha){
+   try{window.grecaptcha.reset();}catch(_){}
+  }
+
+  loginError(e.message||"Could not send OTP.");
+
+ }finally{
+  btn.disabled=false;
+ }
 };
 $("verifyOtp").onclick=async()=>{try{await window.confirmationResult.confirm($("otp").value.trim())}catch(e){loginError(e.message||"OTP verification failed")}};
 async function loadProfile(user){
