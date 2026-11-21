@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#142d43"><meta name="description" content="Sanger Communication retail business manager">
+<link rel="manifest" href="manifest.webmanifest"><link rel="icon" href="assets/icon-192.png">
+<title>Sanger Business Manager</title>
+<style>
+:root{--navy:#142d43;--blue:#1d4f73;--bg:#f3f6f9;--card:#fff;--text:#17212b;--muted:#64748b;--line:#e2e8f0;--green:#16834a;--red:#b42318}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+header{background:var(--navy);color:#fff;padding:18px 16px 16px;position:sticky;top:0;z-index:3;box-shadow:0 2px 10px #0002}
+.brand{font-size:20px;font-weight:800;letter-spacing:1.5px}.sub{font-size:12px;color:#c8d6e2;margin-top:2px}
+main{max-width:850px;margin:auto;padding:16px 14px 90px}.card{background:var(--card);border:1px solid var(--line);border-radius:15px;padding:15px;margin:12px 0;box-shadow:0 2px 8px #0b23380a}
+h2{font-size:19px;margin:4px 0 12px}h3{font-size:15px;margin:0 0 10px}
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.metric{background:#edf3f8;border-radius:12px;padding:13px}.metric b{font-size:24px;display:block;color:var(--navy)}.metric span{font-size:12px;color:var(--muted)}
+label{display:block;font-size:12px;font-weight:650;color:#425466;margin:10px 0 5px}
+input,select,textarea{width:100%;border:1px solid #cbd5e1;border-radius:10px;padding:12px;font:inherit;background:#fff;color:var(--text);min-height:44px}
+button{border:0;border-radius:10px;padding:12px 15px;background:var(--navy);color:white;font:600 14px system-ui;cursor:pointer}
+button.secondary{background:#e8eef4;color:var(--navy)}button.danger{background:#fff0ef;color:var(--red)}button:disabled{opacity:.55}
+.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}.tabs{position:fixed;bottom:0;left:0;right:0;background:white;border-top:1px solid var(--line);display:flex;justify-content:center;gap:5px;padding:8px 4px calc(8px + env(safe-area-inset-bottom));z-index:4}
+.tabs button{background:transparent;color:#475569;padding:10px 11px;font-size:12px}.tabs button.active{background:#e8eef4;color:var(--navy)}
+.item{padding:12px 0;border-bottom:1px solid var(--line)}.item:last-child{border:0}.muted{color:var(--muted);font-size:12px}.pill{display:inline-block;background:#e8f4ec;color:#17683d;border-radius:20px;padding:3px 8px;font-size:11px;font-weight:700}
+.hidden{display:none!important}.notice{padding:10px 12px;border-radius:10px;background:#fff7e6;color:#805500;font-size:13px;margin:10px 0}.error{background:#fff0ef;color:var(--red)}.success{background:#eaf7ef;color:#17683d}
+.row{display:flex;justify-content:space-between;gap:10px;align-items:center}.smallbtn{padding:7px 10px;font-size:12px}.right{text-align:right}
+#login{max-width:460px;margin:35px auto;padding:0 14px}.logo{font-size:26px;font-weight:900;letter-spacing:2px;color:var(--navy)}
+footer{text-align:center;color:var(--muted);font-size:11px;padding:18px}
+</style>
+</head>
+<body>
+<header><div class="brand">SANGER</div><div class="sub">BUSINESS MANAGER <span id="branchBadge"></span></div></header>
+<div id="login">
+ <div class="card">
+  <div class="logo">SANGER</div><h2>Business Manager</h2>
+  <p class="muted">Secure sign-in for authorized Sanger Communication accounts.</p>
+  <div id="loginNotice" class="notice">Connect your Firebase project before using OTP login.</div>
+  <label>Mobile number</label><input id="phone" type="tel" placeholder="+91 9876543210" autocomplete="tel">
+  <div id="recaptcha-container" style="margin:12px 0"></div>
+  <button id="sendOtp" style="width:100%">Send OTP</button>
+  <div id="otpArea" class="hidden"><label>6-digit OTP</label><input id="otp" inputmode="numeric" maxlength="6" placeholder="Enter OTP"><div class="actions"><button id="verifyOtp">Verify & login</button></div></div>
+  <div id="loginError" class="notice error hidden"></div>
+ </div>
+</div>
+<main id="app" class="hidden">
+ <div id="message" class="notice hidden"></div>
+ <section id="dashboardTab">
+  <h2>Business overview</h2>
+  <div class="grid">
+   <div class="metric"><b id="stockCount">0</b><span>Available stock</span></div>
+   <div class="metric"><b id="salesCount">0</b><span>Recorded sales</span></div>
+   <div class="metric adminOnly"><b id="salesTotal">₹0</b><span>Sales value (loaded records)</span></div>
+   <div class="metric adminOnly"><b id="profitTotal">₹0</b><span>Gross profit (loaded records)</span></div>
+  </div>
+  <div class="card"><h3>Account access</h3><div id="accountInfo" class="muted"></div></div>
+  <div class="card adminOnly"><h3>Branch snapshot</h3><div id="branchSnapshot" class="muted">Loading…</div></div>
+ </section>
+ <section id="stockTab" class="hidden">
+  <h2>Inventory</h2>
+  <div class="card adminOnly">
+   <h3>Add inventory</h3>
+   <label>Category</label><select id="category"><option>Mobile phones</option><option>TV</option><option>Refrigerator</option><option>Washing machine</option><option>Accessories</option><option>Other electronics</option></select>
+   <label>Brand</label><input id="brand" placeholder="e.g. Samsung">
+   <label>Model / product name</label><input id="model" placeholder="e.g. Galaxy A56">
+   <div id="imeiFields"><label>IMEI 1 (unique item ID)</label><input id="imei1" inputmode="numeric" placeholder="15-digit IMEI"><label>IMEI 2 (optional)</label><input id="imei2" inputmode="numeric" placeholder="Second IMEI"></div>
+   <label>Purchase price (₹)</label><input id="purchasePrice" type="number" min="0" step="0.01" placeholder="0">
+   <label>Supplier name</label><input id="supplier" placeholder="Supplier / distributor">
+   <label>Supplier invoice / reference (optional)</label><input id="purchaseRef" placeholder="Invoice number">
+   <label>Branch</label><select id="stockBranch"><option value="branch1">Branch 1 – Azad Vihar</option><option value="branch2">Branch 2 – Mahalaxmi Garden</option></select>
+   <div class="actions"><button id="addStock">Save stock item</button></div>
+  </div>
+  <div class="card"><div class="row"><h3>Stock list</h3><button class="secondary smallbtn" id="refreshStock">Refresh</button></div><input id="stockSearch" placeholder="Search brand, model or IMEI"><div id="stockList" class="muted">Loading stock…</div></div>
+ </section>
+ <section id="saleTab" class="hidden">
+  <h2>Record a sale</h2>
+  <div class="card">
+   <label>IMEI / inventory item ID</label><input id="saleItemId" placeholder="Scan or type item ID">
+   <label>Customer name</label><input id="customerName" placeholder="Customer full name">
+   <label>Customer mobile</label><input id="customerPhone" type="tel" placeholder="+91...">
+   <label>Selling price (₹)</label><input id="salePrice" type="number" min="0" step="0.01" placeholder="0">
+   <label>Payment method</label><select id="payment"><option>Cash</option><option>UPI</option><option>Card</option><option>EMI</option><option>Bank transfer</option><option>Other</option></select>
+   <label>Discount (₹)</label><input id="discount" type="number" min="0" step="0.01" value="0">
+   <label>Sale notes (optional)</label><textarea id="saleNotes" rows="2" placeholder="Warranty, exchange or other notes"></textarea>
+   <div class="actions"><button id="completeSale">Complete sale</button></div>
+  </div>
+ </section>
+ <section id="historyTab" class="hidden">
+  <h2>Sales history</h2><div class="card"><input id="salesSearch" placeholder="Search customer, phone or item ID"><div id="salesList">Loading…</div></div>
+ </section>
+ <div class="actions"><button class="secondary" id="signOut">Sign out</button></div>
+ <footer>Protect customer information. Use only authorized staff accounts.</footer>
+</main>
+<nav id="tabs" class="tabs hidden">
+ <button class="active" data-tab="dashboard">⌂<br>Home</button>
+ <button data-tab="stock">▦<br>Stock</button>
+ <button data-tab="sale">＋<br>Sale</button>
+ <button data-tab="history">▤<br>History</button>
+</nav>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script>
+/* Paste your Firebase web-app configuration here after creating the Firebase project. */
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAySuqJ9XVwtUs404B7aYwZhib15zIvNvs",
+  authDomain: "sanger-crm.firebaseapp.com",
+  projectId: "sanger-crm",
+  storageBucket: "sanger-crm.firebasestorage.app",
+  messagingSenderId: "655894455752",
+  appId: "1:655894455752:web:e2dc72d276588b38c5ccfd",
+  measurementId: "G-796NWZVSQM"
+};
+const configured = !firebaseConfig.apiKey.startsWith("PASTE_");
+let auth=null, db=null, currentUser=null, profile=null, verifier=null, inventory=[], sales=[];
+const $=id=>document.getElementById(id);
+const money=n=>"₹"+Number(n||0).toLocaleString("en-IN",{maximumFractionDigits:2});
+function notify(msg,kind=""){const el=$("message");el.textContent=msg;el.className="notice "+kind;el.classList.remove("hidden");setTimeout(()=>el.classList.add("hidden"),5000)}
+function loginError(msg){$("loginError").textContent=msg;$("loginError").classList.remove("hidden")}
+function branchName(id){return id==="branch1"?"Branch 1 – Azad Vihar":"Branch 2 – Mahalaxmi Garden"}
+function showTab(name){["dashboard","stock","sale","history"].forEach(t=>$(t+"Tab").classList.toggle("hidden",t!==name));document.querySelectorAll(".tabs button").forEach(b=>b.classList.toggle("active",b.dataset.tab===name));}
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>showTab(b.dataset.tab)));
+$("category").addEventListener("change",()=>{$("imeiFields").classList.toggle("hidden",$("category").value!=="Mobile phones")});
+$("sendOtp").onclick=async()=>{
+ try{
+  if(!configured) throw Error("Firebase is not configured yet. Follow the setup guide in the downloaded project.");
+  const phone=$("phone").value.trim();if(!/^\+[1-9]\d{7,14}$/.test(phone))throw Error("Enter phone with country code, e.g. +919876543210");
+  verifier=new firebase.auth.RecaptchaVerifier("recaptcha-container",{size:"normal"});
+  await verifier.render();const confirmation=await auth.signInWithPhoneNumber(phone,verifier);
+  window.confirmationResult=confirmation;$("otpArea").classList.remove("hidden");notify("OTP sent. Check your SMS.","success");
+ }catch(e){loginError(e.message||"Could not send OTP")}
+};
+$("verifyOtp").onclick=async()=>{try{await window.confirmationResult.confirm($("otp").value.trim())}catch(e){loginError(e.message||"OTP verification failed")}};
+async function loadProfile(user){
+ const doc=await db.collection("users").doc(user.uid).get();
+ if(!doc.exists)throw Error("Your number is not activated. Ask the admin to add your account in Firebase first.");
+ const p=doc.data();if(!["admin","staff"].includes(p.role))throw Error("Account role is invalid.");
+ if(p.role==="staff"&&!["branch1","branch2"].includes(p.branchId))throw Error("Staff branch has not been assigned.");
+ profile={...p,uid:user.uid};currentUser=user;
+ $("login").classList.add("hidden");$("app").classList.remove("hidden");$("tabs").classList.remove("hidden");
+ document.querySelectorAll(".adminOnly").forEach(el=>el.classList.toggle("hidden",profile.role!=="admin"));
+ $("branchBadge").textContent=profile.role==="admin"?"· ADMIN":"· "+branchName(profile.branchId);
+ $("accountInfo").textContent=profile.role==="admin"?"Administrator · Full access to both branches": "Staff · Restricted to "+branchName(profile.branchId);
+ $("stockBranch").value=profile.role==="admin"?"branch1":profile.branchId;
+ $("stockBranch").disabled=profile.role!=="admin";
+ await refreshData();
+}
+async function refreshData(){
+ let iq=db.collection("inventory");let sq=db.collection("sales");
+ if(profile.role!=="admin"){iq=iq.where("branchId","==",profile.branchId);sq=sq.where("branchId","==",profile.branchId)}
+ const [is,ss]=await Promise.all([iq.get(),sq.get()]);
+ inventory=is.docs.map(d=>({id:d.id,...d.data()}));sales=ss.docs.map(d=>({id:d.id,...d.data()}));
+ $("stockCount").textContent=inventory.filter(x=>x.status==="available").length;
+ $("salesCount").textContent=sales.length;
+ if(profile.role==="admin"){
+  $("salesTotal").textContent=money(sales.reduce((a,s)=>a+Number(s.salePrice||0),0));
+  $("profitTotal").textContent=money(sales.reduce((a,s)=>a+Number(s.grossProfit||0),0));
+  $("branchSnapshot").textContent=["branch1","branch2"].map(b=>branchName(b)+": "+inventory.filter(x=>x.branchId===b&&x.status==="available").length+" available items").join(" · ");
+ }
+ renderStock();renderSales();
+}
+function renderStock(){
+ const q=$("stockSearch").value.toLowerCase();
+ const rows=inventory.filter(x=>([x.brand,x.model,x.imei1,x.imei2,x.category].join(" ").toLowerCase().includes(q)));
+ $("stockList").innerHTML=rows.length?rows.map(x=>`<div class="item"><div class="row"><b>${esc(x.brand||"")} ${esc(x.model||"")}</b><span class="pill">${esc(x.status||"available")}</span></div><div class="muted">${esc(x.category||"")} · ${esc(branchName(x.branchId))}</div>${x.imei1?`<div class="muted">IMEI: ${esc(x.imei1)}</div>`:""}<div class="muted">Purchase: ${money(x.purchasePrice)} · Supplier: ${esc(x.supplier||"—")}</div></div>`).join(""):"No matching stock records."}
+function renderSales(){
+ const q=$("salesSearch").value.toLowerCase();const rows=sales.filter(s=>[s.customerName,s.customerPhone,s.itemId,s.model].join(" ").toLowerCase().includes(q)).sort((a,b)=>(b.soldAt?.seconds||0)-(a.soldAt?.seconds||0));
+ $("salesList").innerHTML=rows.length?rows.map(s=>`<div class="item"><b>${esc(s.customerName||"Customer")} · ${money(s.salePrice)}</b><div class="muted">${esc(s.brand||"")} ${esc(s.model||"")} · ${esc(s.itemId||"")}</div><div class="muted">${esc(s.customerPhone||"")} · ${esc(s.paymentMethod||"")} · ${esc(branchName(s.branchId))}</div>${profile.role==="admin"?`<div class="muted">Gross profit: ${money(s.grossProfit)}</div>`:""}</div>`).join(""):"No sales found."}
+function esc(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]))}
+$("stockSearch").addEventListener("input",renderStock);$("salesSearch").addEventListener("input",renderSales);$("refreshStock").onclick=()=>refreshData().catch(e=>notify(e.message,"error"));
+$("addStock").onclick=async()=>{
+ try{
+  if(profile.role!=="admin")throw Error("Only admin can add inventory.");
+  const category=$("category").value,brand=$("brand").value.trim(),model=$("model").value.trim(),imei1=$("imei1").value.trim(),imei2=$("imei2").value.trim(),purchasePrice=Number($("purchasePrice").value),branchId=$("stockBranch").value;
+  if(!brand||!model||!Number.isFinite(purchasePrice)||purchasePrice<0)throw Error("Enter brand, model and a valid purchase price.");
+  if(category==="Mobile phones"&&!imei1)throw Error("IMEI 1 is required for mobile phones.");
+  const id=category==="Mobile phones"?imei1:db.collection("inventory").doc().id;
+  const ref=db.collection("inventory").doc(id);if((await ref.get()).exists)throw Error("This IMEI/item already exists.");
+  await ref.set({category,brand,model,imei1,imei2,purchasePrice,supplier:$("supplier").value.trim(),purchaseRef:$("purchaseRef").value.trim(),branchId,status:"available",createdAt:firebase.firestore.FieldValue.serverTimestamp(),createdBy:currentUser.uid});
+  ["brand","model","imei1","imei2","purchasePrice","supplier","purchaseRef"].forEach(id=>$(id).value="");
+  await refreshData();notify("Stock item saved.","success");
+ }catch(e){notify(e.message,"error")}
+};
+$("completeSale").onclick=async()=>{
+ try{
+  const itemId=$("saleItemId").value.trim(),customerName=$("customerName").value.trim(),customerPhone=$("customerPhone").value.trim(),salePrice=Number($("salePrice").value),discount=Number($("discount").value||0);
+  if(!itemId||!customerName||!customerPhone||!Number.isFinite(salePrice)||salePrice<0||!Number.isFinite(discount)||discount<0)throw Error("Complete all required sale fields with valid amounts.");
+  const itemRef=db.collection("inventory").doc(itemId),saleRef=db.collection("sales").doc();
+  await db.runTransaction(async tx=>{
+   const snap=await tx.get(itemRef);if(!snap.exists)throw Error("Item/IMEI not found.");
+   const item=snap.data();if(item.status!=="available")throw Error("This item is not available (possibly already sold).");
+   if(profile.role==="staff"&&item.branchId!==profile.branchId)throw Error("This item belongs to another branch.");
+   const net=salePrice-discount;if(net<0)throw Error("Discount cannot exceed selling price.");
+   tx.update(itemRef,{status:"sold",soldAt:firebase.firestore.FieldValue.serverTimestamp()});
+   tx.set(saleRef,{itemId,category:item.category,brand:item.brand,model:item.model,imei1:item.imei1||"",purchasePrice:item.purchasePrice||0,salePrice:net,listedSalePrice:salePrice,discount, grossProfit:net-Number(item.purchasePrice||0),customerName,customerPhone,paymentMethod:$("payment").value,notes:$("saleNotes").value.trim(),branchId:item.branchId,soldByUid:currentUser.uid,soldAt:firebase.firestore.FieldValue.serverTimestamp()});
+  });
+  ["saleItemId","customerName","customerPhone","salePrice","saleNotes"].forEach(id=>$(id).value="");$("discount").value="0";
+  await refreshData();notify("Sale recorded and stock marked sold.","success");
+ }catch(e){notify(e.message,"error")}
+};
+$("signOut").onclick=()=>auth.signOut();
+if("serviceWorker" in navigator)window.addEventListener("load",()=>navigator.serviceWorker.register("./sw.js").catch(()=>{}));
+if(configured){
+ firebase.initializeApp(firebaseConfig);auth=firebase.auth();db=firebase.firestore();
+ auth.onAuthStateChanged(async user=>{
+  if(!user){currentUser=null;profile=null;$("app").classList.add("hidden");$("tabs").classList.add("hidden");$("login").classList.remove("hidden");return}
+  try{await loadProfile(user)}catch(e){loginError(e.message);await auth.signOut()}
+ });
+ $("loginNotice").textContent="Use the mobile number assigned by your administrator.";
+}else{$("sendOtp").disabled=true;$("loginNotice").textContent="Setup required: add Firebase web configuration before enabling login."}
+</script>
+</body></html>

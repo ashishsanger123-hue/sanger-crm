@@ -1,0 +1,27 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function signedIn(){return request.auth != null;}
+  function profile(){return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;}
+  function admin(){return signedIn() && profile().role == 'admin';}
+  function staff(){return signedIn() && profile().role == 'staff';}
+  function branchOK(b){return admin() || (staff() && profile().branchId == b);}
+  match /users/{uid} {
+   allow read: if signedIn() && (request.auth.uid == uid || admin());
+   allow write: if false;
+  }
+  match /inventory/{id} {
+   allow read: if signedIn() && branchOK(resource.data.branchId);
+   allow create, delete: if admin();
+   allow update: if admin() || (staff() && resource.data.branchId == profile().branchId &&
+      resource.data.status == 'available' && request.resource.data.status == 'sold' &&
+      request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','soldAt']));
+  }
+  match /sales/{id} {
+   allow read: if signedIn() && branchOK(resource.data.branchId);
+   allow create: if signedIn() && request.resource.data.soldByUid == request.auth.uid &&
+      branchOK(request.resource.data.branchId);
+   allow update, delete: if admin();
+  }
+ }
+}
